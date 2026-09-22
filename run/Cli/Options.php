@@ -22,4 +22,16 @@ class Options
             default     => throw new \InvalidArgumentException("Invalid target: $target"),
         };
     }
+
+    public function getPaginatorType(): PaginatorType
+    {
+        $options   = $this->options ?? (getopt('', ['paginator::']) ?: []);
+        $paginator = $options['paginator'] ?? 'get-param';
+
+        return match ($paginator) {
+            'wordpress' => PaginatorType::Wordpress,
+            'get-param' => PaginatorType::GetParam,
+            default     => throw new \InvalidArgumentException("Invalid paginator: $paginator"),
+        };
+    }
 }

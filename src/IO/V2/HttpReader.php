@@ -72,6 +72,16 @@ class HttpReader implements ReaderInterface
         $size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
         $code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
+        if ($code === 404 && $path !== $this->path) {
+            // A 404 on a page beyond the last one is treated as "no more
+            // results" so paginators that guess the next URL (rather than
+            // relying on pagination headers) can terminate cleanly. The
+            // initial request is exempt so a broken source URL still fails
+            // loudly instead of silently reading zero records.
+            curl_close($curl);
+            return [[], []];
+        }
+
         if ($code >= 400) {
             throw new \Exception("Could not retreive source. A HTTP error occurred: " . $code);
         }
