@@ -18,9 +18,19 @@ $options    = new \SchemaTransformer\Run\Cli\Options();
 $lockRunner->lock();
 
 $httpReaderPath = getenv('WP_EVENTS_API_URL');
-$transformer    = new WPHeadlessEventTransform('WPH-');
-$reader         = new HttpReader($httpReaderPath, $transformer, [ 'Content-Type' => 'application/json', 'Accept' => 'application/json', ], new WordpressPaginator(), $logger);
-$storage        = StorageFactory::create(
+$headers        = [ 'Content-Type' => 'application/json', 'Accept' => 'application/json' ];
+
+// The host may sit behind HTTP Basic Auth (htpasswd). Only add the header
+// when both credentials are configured, since not every deployment needs it.
+$apiUser = getenv('WP_EVENTS_API_USER');
+$apiPass = getenv('WP_EVENTS_API_PASSWORD');
+if ($apiUser !== false && $apiPass !== false) {
+    $headers['Authorization'] = 'Basic ' . base64_encode($apiUser . ':' . $apiPass);
+}
+
+$transformer = new WPHeadlessEventTransform('WPH-');
+$reader      = new HttpReader($httpReaderPath, $transformer, $headers, new WordpressPaginator(), $logger);
+$storage     = StorageFactory::create(
     target: $options->getTarget(),
     logger: $logger,
     options: [
