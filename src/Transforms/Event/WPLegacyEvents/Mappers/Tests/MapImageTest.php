@@ -14,45 +14,104 @@ use SchemaTransformer\Transforms\Event\WPLegacyEvents\Mappers\MapImage;
 #[CoversClass(MapImage::class)]
 final class MapImageTest extends TestCase
 {
-    #[TestDox('event::image is mapped from featured_media')]
-    public function testMapsFeaturedMedia()
+    #[TestDox('event::image() is taken from featured_media')]
+    public function testItWorks()
     {
         (new TestHelper())->expectMapperToConvertSourceTo(
             new MapImage(),
             '{
-                "featured_media": {
-                    "id": 1,
-                    "alt_text": "Alt",
-                    "source_url": "https://example.com/image.jpg"
+                "_embedded": {
+                    "wp:featuredmedia": [
+                        {
+                            "source_url": "https://example.com/image.jpg",
+                            "alt_text": "An example image"
+                        },
+                        {
+                            "source_url": "https://example.com/image2.jpg",
+                            "alt_text": "Another example image"
+                        }
+                    ]
                 }
             }',
             Schema::event()->image([
-                Schema::imageObject()->url('https://example.com/image.jpg')->description('Alt')->caption('Alt')
+                Schema::imageObject()
+                    ->url('https://example.com/image.jpg')
+                    ->description('An example image')
+                    ->caption('An example image'),
+                Schema::imageObject()
+                    ->url('https://example.com/image2.jpg')
+                    ->description('Another example image')
+                    ->caption('Another example image'),
             ])
         );
     }
 
-    #[TestDox('event::image is mapped from _embedded wp:featuredmedia')]
-    public function testMapsEmbeddedFeaturedMedia()
+    #[TestDox('event::image(null) when featured_media is missing')]
+    public function testHandlesMissingContent()
     {
-        (new TestHelper())->expectMapperToConvertSourceTo(
-            new MapImage(),
-            '{
-                "_embedded": {"wp:featuredmedia": [{"source_url": "https://example.com/image.jpg", "alt_text": "Alt"}]}
-            }',
-            Schema::event()->image([
-                Schema::imageObject()->url('https://example.com/image.jpg')->description('Alt')->caption('Alt')
-            ])
-        );
+        (new TestHelper())
+            ->expectMapperToConvertSourceTo(
+                new MapImage(),
+                '{"id": 123}',
+                Schema::event()->image([]),
+                "No image should be set if no featured media exists"
+            )
+            ->expectMapperToConvertSourceTo(
+                new MapImage(),
+                '{
+                    "_embedded": {
+                        "wp:featuredmedia": [
+                            {
+                                "source_url": null,
+                                "alt_text": "An example image"
+                            }
+                        ]
+                    }
+                }',
+                Schema::event()->image([]),
+                "No image should be set if no featured media url exists"
+            )
+            ->expectMapperToConvertSourceTo(
+                new MapImage(),
+                '{
+                    "_embedded": {
+                        "wp:featuredmedia": [
+                            {
+                                "alt_text": "An example image"
+                            }
+                        ]
+                    }
+                }',
+                Schema::event()->image([]),
+                "No image should be set if no featured media exists"
+            );
     }
 
-    #[TestDox('event::image is empty when featured_media is missing')]
-    public function testHandlesMissingMedia()
+    #[TestDox('event::image() is taken from featured_media object when not embedded')]
+    public function testMapsFeaturedMediaObject()
     {
-        (new TestHelper())->expectMapperToConvertSourceTo(
-            new MapImage(),
-            '{"featured_media": 0}',
-            Schema::event()->image([])
-        );
+        (new TestHelper())
+            ->expectMapperToConvertSourceTo(
+                new MapImage(),
+                '{
+                    "featured_media": {
+                        "id": 1,
+                        "alt_text": "An example image",
+                        "source_url": "https://example.com/image.jpg"
+                    }
+                }',
+                Schema::event()->image([
+                    Schema::imageObject()
+                        ->url('https://example.com/image.jpg')
+                        ->description('An example image')
+                        ->caption('An example image'),
+                ])
+            )
+            ->expectMapperToConvertSourceTo(
+                new MapImage(),
+                '{"featured_media": 0}',
+                Schema::event()->image([]),
+                "No image should be set when featured_media is not an object"
+            );
     }
 }
