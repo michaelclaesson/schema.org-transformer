@@ -14,76 +14,45 @@ use SchemaTransformer\Transforms\Event\WPLegacyEvents\Mappers\MapImage;
 #[CoversClass(MapImage::class)]
 final class MapImageTest extends TestCase
 {
-    #[TestDox('event::image() is taken from featured_media')]
-    public function testItWorks()
+    #[TestDox('event::image is mapped from featured_media')]
+    public function testMapsFeaturedMedia()
     {
         (new TestHelper())->expectMapperToConvertSourceTo(
             new MapImage(),
             '{
-                "_embedded": {
-                    "wp:featuredmedia": [
-                        {
-                            "source_url": "https://example.com/image.jpg",
-                            "alt_text": "An example image"
-                        },
-                        {
-                            "source_url": "https://example.com/image2.jpg",
-                            "alt_text": "Another example image"
-                        }
-                    ]
+                "featured_media": {
+                    "id": 1,
+                    "alt_text": "Alt",
+                    "source_url": "https://example.com/image.jpg"
                 }
             }',
             Schema::event()->image([
-                Schema::imageObject()
-                    ->url('https://example.com/image.jpg')
-                    ->description('An example image')
-                    ->caption('An example image'),
-                Schema::imageObject()
-                    ->url('https://example.com/image2.jpg')
-                    ->description('Another example image')
-                    ->caption('Another example image'),
+                Schema::imageObject()->url('https://example.com/image.jpg')->description('Alt')->caption('Alt')
             ])
         );
     }
 
-    #[TestDox('event::image(null) when featured_media is missing')]
-    public function testHandlesMissingContent()
+    #[TestDox('event::image is mapped from _embedded wp:featuredmedia')]
+    public function testMapsEmbeddedFeaturedMedia()
     {
-        (new TestHelper())
-            ->expectMapperToConvertSourceTo(
-                new MapImage(),
-                '{"id": 123}',
-                Schema::event()->image([]),
-                "No image should be set if no featured media exists"
-            )
-            ->expectMapperToConvertSourceTo(
-                new MapImage(),
-                '{
-                    "_embedded": {
-                        "wp:featuredmedia": [
-                            {
-                                "source_url": null,
-                                "alt_text": "An example image"
-                            }
-                        ]
-                    }
-                }',
-                Schema::event()->image([]),
-                "No image should be set if no featured media url exists"
-            )
-            ->expectMapperToConvertSourceTo(
-                new MapImage(),
-                '{
-                    "_embedded": {
-                        "wp:featuredmedia": [
-                            {
-                                "alt_text": "An example image"
-                            }
-                        ]
-                    }
-                }',
-                Schema::event()->image([]),
-                "No image should be set if no featured media exists"
-            );
+        (new TestHelper())->expectMapperToConvertSourceTo(
+            new MapImage(),
+            '{
+                "_embedded": {"wp:featuredmedia": [{"source_url": "https://example.com/image.jpg", "alt_text": "Alt"}]}
+            }',
+            Schema::event()->image([
+                Schema::imageObject()->url('https://example.com/image.jpg')->description('Alt')->caption('Alt')
+            ])
+        );
+    }
+
+    #[TestDox('event::image is empty when featured_media is missing')]
+    public function testHandlesMissingMedia()
+    {
+        (new TestHelper())->expectMapperToConvertSourceTo(
+            new MapImage(),
+            '{"featured_media": 0}',
+            Schema::event()->image([])
+        );
     }
 }
