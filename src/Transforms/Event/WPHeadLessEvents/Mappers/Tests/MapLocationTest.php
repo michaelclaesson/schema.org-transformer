@@ -15,6 +15,35 @@ use SchemaTransformer\Transforms\Event\WPHeadLessEvents\Mappers\Tests\TestHelper
 #[CoversClass(MapLocation::class)]
 final class MapLocationTest extends TestCase
 {
+    #[TestDox('event::location is taken from an embedded reusable place, with event specific details')]
+    public function testReusablePlace()
+    {
+        $event = (new MapLocation())->map(Schema::event(), [
+            'acf' => ['eventPlace' => 7, 'locationDetails' => 'Konferensrum 1'],
+            '_embedded' => ['acf:term' => [
+                ['id' => 3, 'taxonomy' => 'organization', 'name' => 'Org'],
+                ['id' => 7, 'taxonomy' => 'event_place', 'name' => 'Medborgarhuset', 'place' => [
+                    '@type' => 'Place', 'name' => 'Medborgarhuset', 'address' => 'Kyrkogatan 1, Eslöv',
+                    'latitude' => 55.8346, 'longitude' => 13.3028,
+                ]],
+            ]],
+        ]);
+        $place = $event->toArray()['location'][0];
+        self::assertSame('Medborgarhuset', $place['name']);
+        self::assertSame('Kyrkogatan 1, Eslöv', $place['address']);
+        self::assertSame(55.8346, $place['latitude']);
+        self::assertSame('Konferensrum 1', $place['description']);
+    }
+
+    #[TestDox('event::location falls back to inline fields when no reusable place is embedded')]
+    public function testFallsBackToInline()
+    {
+        $event = (new MapLocation())->map(Schema::event(), ['acf' => [
+            'locationName' => 'Dunkers', 'locationAddress' => ['address' => 'Kungsgatan', 'lat' => 1.5, 'lng' => 2.5],
+        ]]);
+        self::assertSame('Dunkers', $event->toArray()['location'][0]['name']);
+    }
+
     #[TestDox('event::location is constructed from acf.locationName, acf.locationAddress')]
     public function testItWorks()
     {

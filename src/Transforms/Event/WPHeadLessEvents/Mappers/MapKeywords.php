@@ -12,7 +12,8 @@ class MapKeywords extends AbstractWPHeadlessEventMapper
 {
     private array $ignoredTaxonomies = [
         'organization'  => true,
-        'accessibility' => true
+        'accessibility' => true,
+        'event_place'   => true
     ];
     public function __construct()
     {
